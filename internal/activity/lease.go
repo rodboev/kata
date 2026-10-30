@@ -2,6 +2,8 @@
 // background workers without coupling those packages to the idle controller.
 package activity
 
+// Test-only Go change for CI selection.
+
 import "sync"
 
 // Admission admits one finite unit of background work.
