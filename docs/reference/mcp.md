@@ -574,3 +574,5 @@ a burst of 20, and at most eight concurrent daemon calls per server process.
 Host process control stays outside MCP: daemon lifecycle, the TUI and Web UI,
 install/update, database migrations and cutovers, and raw internal replication
 endpoints remain CLI or operator workflows.
+
+<!-- CI probe for embedded documentation change selection. -->
