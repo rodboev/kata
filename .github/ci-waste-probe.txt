@@ -1,0 +1,1 @@
+Test-only shared workflow input for CI selection.
