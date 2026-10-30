@@ -132,3 +132,5 @@ a:hover {
 #app .kit-modal-footer {
   border-top-color: var(--border-muted);
 }
+
+/* CI probe for frontend-only change selection. */
