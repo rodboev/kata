@@ -305,3 +305,4 @@ deduplication and the separate attention lifecycle.
 See [Contributing](docs/development/contributing.md) for the repository layout
 and local checks (`make test`, `make lint`, `make vet`, `make nilaway`).
 Licensed under the terms in [LICENSE](LICENSE).
+<!-- Test-only documentation change for CI selection. -->
