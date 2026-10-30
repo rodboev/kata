@@ -1,3 +1,4 @@
+// Use macOS when the browser platform is unknown.
 const DEFAULT_PLATFORM = 'macos'
 
 const initializedPanels = new WeakSet()
