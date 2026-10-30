@@ -1,3 +1,4 @@
+// Test-only JavaScript change for CI selection.
 const DEFAULT_PLATFORM = 'macos'
 
 const initializedPanels = new WeakSet()
