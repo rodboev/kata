@@ -241,7 +241,7 @@ jobs:
           others=$(go list ./... | grep -v '/e2e$' | grep -vx "$cli_package" | grep -vx "$daemon_package")
           pids=()
           run_tests() {
-            env -u KATA_AUTH_TOKEN go test -count=1 "$@" &
+            env -u KATA_AUTH_TOKEN go test -v -count=1 "$@" &
             pids+=("$!")
           }
           failed=0
