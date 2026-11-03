@@ -244,9 +244,9 @@ jobs:
             env -u KATA_AUTH_TOKEN go test -count=1 "$@" &
             pids+=("$!")
           }
-          run_tests $others
           failed=0
-          env -u KATA_AUTH_TOKEN go test -run '^$' ./cmd/kata ./internal/daemon || failed=1
+          env -u KATA_AUTH_TOKEN go test -run '^$' $others ./cmd/kata ./internal/daemon || failed=1
+          run_tests $others
           cli_first='^Test[A-E]'
           cli_second='^Test[F-N]'
           daemon_range='^Test[A-O]'
