@@ -234,8 +234,31 @@ jobs:
           KATA_TEST_POSTGRES_AUTO_CONTAINER: "0"
           KATA_SKIP_OPENAPI_CLIENT_CHECK: "1"
         # e2e runs alone because it rebuilds the embedded web assets other packages compile against.
+        # Ranges use measured root-test times; rebalance when one process outlasts the others.
         run: |
-          env -u KATA_AUTH_TOKEN go test -count=1 $(go list ./... | grep -v '/e2e$')
+          cli_package=$(go list ./cmd/kata)
+          daemon_package=$(go list ./internal/daemon)
+          others=$(go list ./... | grep -v '/e2e$' | grep -vx "$cli_package" | grep -vx "$daemon_package")
+          pids=()
+          run_tests() {
+            env -u KATA_AUTH_TOKEN go test -count=1 "$@" &
+            pids+=("$!")
+          }
+          run_tests $others
+          env -u KATA_AUTH_TOKEN go test -run '^$' ./cmd/kata ./internal/daemon
+          cli_first='^Test[A-E]'
+          cli_second='^Test[F-N]'
+          daemon_range='^Test[A-O]'
+          run_tests -run "$cli_first" ./cmd/kata
+          run_tests -run "$cli_second" ./cmd/kata
+          run_tests -run . -skip "$cli_first|$cli_second" ./cmd/kata
+          run_tests -run "$daemon_range" ./internal/daemon
+          run_tests -run . -skip "$daemon_range" ./internal/daemon
+          failed=0
+          for pid in "${pids[@]}"; do
+            wait "$pid" || failed=1
+          done
+          if ((failed)); then exit 1; fi
           env -u KATA_AUTH_TOKEN go test -count=1 -p 1 ./e2e
 
   native-agent-plugins:
