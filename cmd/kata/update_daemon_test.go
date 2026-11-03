@@ -46,6 +46,10 @@ func TestUpdateInstall_DaemonLifecycle(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds and runs isolated daemon binaries")
 	}
+	binaries := make(map[string]string)
+	for _, version := range []string{"v0.1.0", "v0.2.0"} {
+		binaries[version] = kataTestBinary(t, version)
+	}
 	// Child daemons get only toolchain/OS variables and the test's Kata paths.
 	var childEnv []string
 	allowed := []string{"PATH", "HOME", "USERPROFILE", "LOCALAPPDATA", "SYSTEMROOT", "WINDIR", "TMPDIR", "TMP", "TEMP", "GOCACHE", "GOMODCACHE", "GOPATH", "GOROOT", "GOTOOLCHAIN", "CGO_CFLAGS", "CGO_LDFLAGS"}
@@ -64,24 +68,8 @@ func TestUpdateInstall_DaemonLifecycle(t *testing.T) {
 			t.Setenv(key, "")
 		}
 	}
-	moduleDir, err := os.Getwd()
-	require.NoError(t, err)
 	workspace := t.TempDir()
 	t.Chdir(workspace)
-	binaries := make(map[string]string)
-	for _, version := range []string{"v0.1.0", "v0.2.0"} {
-		binary := filepath.Join(t.TempDir(), "kata")
-		if runtime.GOOS == "windows" {
-			binary += ".exe"
-		}
-		build := exec.CommandContext(t.Context(), "go", "build", "-buildvcs=false", "-ldflags", "-X go.kenn.io/kata/internal/version.Version="+version, "-o", binary, "go.kenn.io/kata/cmd/kata") //nolint:gosec // test-owned executable and fixed build arguments
-		// Build inside the module, while runtime commands use a scratch workspace.
-		build.Dir = moduleDir
-		build.Env = childEnv
-		output, err := build.CombinedOutput()
-		require.NoError(t, err, "%s", output)
-		binaries[version] = binary
-	}
 	for _, scenario := range []string{"running", "stopped", "check only", "cancelled", "install failure", "restart failure", "read-only TCP", "older daemon", "daemon token", "idle shutdown"} {
 		t.Run(scenario, func(t *testing.T) {
 			resetFlags(t)
