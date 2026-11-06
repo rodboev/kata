@@ -4,7 +4,7 @@ on:
   workflow_call:
   push:
     branches:
-      - main
+      - bench/tests-round7-3-go-cache
 permissions:
   contents: read
 
@@ -54,7 +54,7 @@ jobs:
 
   web-static:
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.all == 'true' || contains(fromJSON(needs.changes.outputs.groups), 'frontend') || contains(fromJSON(needs.changes.outputs.groups), 'docs-javascript') || contains(fromJSON(needs.changes.outputs.groups), 'embedded-docs')) }}
+    if: ${{ false }}
     name: Web static checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -115,7 +115,7 @@ jobs:
 
   web-browser:
     needs: changes
-    if: &go-frontend-changes ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.all == 'true' || contains(fromJSON(needs.changes.outputs.groups), 'go') || contains(fromJSON(needs.changes.outputs.groups), 'frontend') || contains(fromJSON(needs.changes.outputs.groups), 'embedded-docs')) }}
+    if: ${{ false }}
     name: Web browser tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -242,7 +242,7 @@ jobs:
 
   go:
     needs: changes
-    if: *go-frontend-changes
+    if: &go-frontend-changes ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.all == 'true' || contains(fromJSON(needs.changes.outputs.groups), 'go') || contains(fromJSON(needs.changes.outputs.groups), 'frontend') || contains(fromJSON(needs.changes.outputs.groups), 'embedded-docs')) }}
     name: Go tests
     runs-on: ubuntu-latest
     timeout-minutes: 24
@@ -268,12 +268,12 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: linux-go-${{ runner.os }}-${{ runner.arch }}-go-${{ steps.setup-go.outputs.go-version }}-${{ github.sha }}
+          key: bench-tests-round7-3-go-${{ runner.os }}-${{ runner.arch }}-go-${{ steps.setup-go.outputs.go-version }}-${{ github.sha }}
           restore-keys: |
-            linux-go-${{ runner.os }}-${{ runner.arch }}-go-${{ steps.setup-go.outputs.go-version }}-
+            bench-tests-round7-3-go-${{ runner.os }}-${{ runner.arch }}-go-${{ steps.setup-go.outputs.go-version }}-
 
       - name: Track Linux Go cache use
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.restore-go-cache.outputs.cache-hit != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/bench/tests-round7-3-go-cache' && steps.restore-go-cache.outputs.cache-hit != 'true'
         run: |
           cache=$(go env GOCACHE)
           mkdir -p "$cache"
@@ -344,7 +344,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Trim unused Linux Go cache entries
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.restore-go-cache.outputs.cache-hit != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/bench/tests-round7-3-go-cache' && steps.restore-go-cache.outputs.cache-hit != 'true'
         run: |
           cache=$(go env GOCACHE)
           modules=$(go env GOMODCACHE)
@@ -356,17 +356,17 @@ jobs:
           du -sh "$cache" "$modules"
 
       - name: Save Linux Go cache
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.restore-go-cache.outputs.cache-hit != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/bench/tests-round7-3-go-cache' && steps.restore-go-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6.1.0
         with:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: linux-go-${{ runner.os }}-${{ runner.arch }}-go-${{ steps.setup-go.outputs.go-version }}-${{ github.sha }}
+          key: bench-tests-round7-3-go-${{ runner.os }}-${{ runner.arch }}-go-${{ steps.setup-go.outputs.go-version }}-${{ github.sha }}
 
   native-agent-plugins:
     needs: changes
-    if: &go-changes ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.all == 'true' || contains(fromJSON(needs.changes.outputs.groups), 'go') || contains(fromJSON(needs.changes.outputs.groups), 'embedded-docs')) }}
+    if: ${{ false }}
     name: Native agent plugins
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -424,7 +424,7 @@ jobs:
 
   api-breaking:
     needs: changes
-    if: ${{ !cancelled() && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && (needs.changes.result != 'success' || needs.changes.outputs.all == 'true' || contains(fromJSON(needs.changes.outputs.groups), 'go') || contains(fromJSON(needs.changes.outputs.groups), 'embedded-docs')) }}
+    if: ${{ false }}
     name: OpenAPI breaking changes
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -449,7 +449,7 @@ jobs:
 
   api-check:
     needs: changes
-    if: *go-changes
+    if: ${{ false }}
     name: OpenAPI artifacts
     runs-on: ubuntu-latest
     timeout-minutes: 14
@@ -612,7 +612,7 @@ jobs:
 
   windows:
     needs: changes
-    if: *go-changes
+    if: ${{ false }}
     name: ${{ matrix.name }}
     runs-on: windows-2025
     timeout-minutes: ${{ matrix.timeout }}
@@ -727,7 +727,7 @@ jobs:
 
   lint:
     needs: changes
-    if: *go-changes
+    if: ${{ false }}
     name: golangci-lint
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -799,7 +799,7 @@ jobs:
 
   nilaway:
     needs: changes
-    if: *go-changes
+    if: ${{ false }}
     name: nilaway
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -822,7 +822,7 @@ jobs:
 
   federation-stress:
     needs: changes
-    if: *go-changes
+    if: ${{ false }}
     name: Federation stress tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -854,7 +854,7 @@ jobs:
 
   federation-docker:
     needs: changes
-    if: *go-changes
+    if: ${{ false }}
     name: Federation Docker tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
