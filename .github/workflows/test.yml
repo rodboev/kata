@@ -54,7 +54,7 @@ jobs:
 
   web-static:
     needs: changes
-    if: ${{ false }}
+    if: ${{ github.ref != 'refs/heads/bench/tests-round7-3-go-cache' }}
     name: Web static checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -115,7 +115,7 @@ jobs:
 
   web-browser:
     needs: changes
-    if: ${{ false }}
+    if: ${{ github.ref != 'refs/heads/bench/tests-round7-3-go-cache' }}
     name: Web browser tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -242,7 +242,7 @@ jobs:
 
   go:
     needs: changes
-    if: &go-frontend-changes ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.all == 'true' || contains(fromJSON(needs.changes.outputs.groups), 'go') || contains(fromJSON(needs.changes.outputs.groups), 'frontend') || contains(fromJSON(needs.changes.outputs.groups), 'embedded-docs')) }}
+    if: &go-frontend-changes ${{ github.ref != 'refs/heads/bench/tests-round7-3-go-cache' }}
     name: Go tests
     runs-on: ubuntu-latest
     timeout-minutes: 24
@@ -375,7 +375,7 @@ jobs:
 
   native-agent-plugins:
     needs: changes
-    if: ${{ false }}
+    if: ${{ github.ref != 'refs/heads/bench/tests-round7-3-go-cache' }}
     name: Native agent plugins
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -433,7 +433,7 @@ jobs:
 
   api-breaking:
     needs: changes
-    if: ${{ false }}
+    if: ${{ github.ref != 'refs/heads/bench/tests-round7-3-go-cache' }}
     name: OpenAPI breaking changes
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -458,7 +458,7 @@ jobs:
 
   api-check:
     needs: changes
-    if: ${{ false }}
+    if: ${{ github.ref != 'refs/heads/bench/tests-round7-3-go-cache' }}
     name: OpenAPI artifacts
     runs-on: ubuntu-latest
     timeout-minutes: 14
@@ -621,7 +621,7 @@ jobs:
 
   windows:
     needs: changes
-    if: ${{ false }}
+    if: ${{ github.ref != 'refs/heads/bench/tests-round7-3-go-cache' }}
     name: ${{ matrix.name }}
     runs-on: windows-2025
     timeout-minutes: ${{ matrix.timeout }}
@@ -736,7 +736,7 @@ jobs:
 
   lint:
     needs: changes
-    if: ${{ false }}
+    if: ${{ github.ref != 'refs/heads/bench/tests-round7-3-go-cache' }}
     name: golangci-lint
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -808,7 +808,7 @@ jobs:
 
   nilaway:
     needs: changes
-    if: ${{ false }}
+    if: ${{ github.ref != 'refs/heads/bench/tests-round7-3-go-cache' }}
     name: nilaway
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -831,7 +831,7 @@ jobs:
 
   federation-stress:
     needs: changes
-    if: ${{ false }}
+    if: ${{ github.ref != 'refs/heads/bench/tests-round7-3-go-cache' }}
     name: Federation stress tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -863,7 +863,7 @@ jobs:
 
   federation-docker:
     needs: changes
-    if: ${{ false }}
+    if: ${{ github.ref != 'refs/heads/bench/tests-round7-3-go-cache' }}
     name: Federation Docker tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -882,3 +882,105 @@ jobs:
 
       - name: Run federation Docker tests
         run: env -u KATA_AUTH_TOKEN make test-federation-docker
+
+  matched-cache-compilation:
+    name: Matched cache compilation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out benchmark source
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 3
+          persist-credentials: false
+
+      - name: Set up Go
+        id: setup-go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Restore benchmark seed cache
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: bench-tests-round7-3-go-${{ runner.os }}-${{ runner.arch }}-go-${{ steps.setup-go.outputs.go-version }}-91811a742246f67c63d58895331f487b851e0417
+          fail-on-cache-miss: true
+
+      - name: Compare changed-source compilation
+        env: *go-test-env
+        shell: bash
+        run: |
+          set -euo pipefail
+          unset KATA_AUTH_TOKEN KATA_TRUST_PRIVATE_NETWORK
+          cache=$(go env GOCACHE)
+          modules=$(go env GOMODCACHE)
+          probe="$RUNNER_TEMP/matched-cache"
+          mkdir -p "$probe/results"
+          cp internal/httpurl/origin.go "$probe/changed-origin.go"
+          git show 56e85de88a28a8ecf5a25bf936772d5eb5eb556b^:internal/httpurl/origin.go > "$probe/parent-origin.go"
+          python3 - "$probe" <<'PYCODE'
+          from pathlib import Path
+          import sys
+          lines = Path('.github/workflows/test.yml').read_text().splitlines()
+          for title, filename in [('Track Linux Go cache use', 'track.sh'), ('Trim unused Linux Go cache entries', 'trim.sh')]:
+              start = next(i for i, line in enumerate(lines) if line.strip() == '- name: ' + title)
+              start = next(i for i in range(start, len(lines)) if lines[i].strip() == 'run: |') + 1
+              body = []
+              for line in lines[start:]:
+                  if line and not line.startswith('          '):
+                      break
+                  body.append(line[10:])
+              (Path(sys.argv[1]) / filename).write_text('\n'.join(body) + '\n')
+          PYCODE
+          compile_probe() {
+            { time go test -x -c -o /dev/null ./... > "$probe/results/$1.log" 2>&1; } 2> "$probe/results/$1.seconds"
+          }
+          export TIMEFORMAT='%R'
+          go version
+          cp "$probe/parent-origin.go" internal/httpurl/origin.go
+          compile_probe parent-seed
+          cp -a "$cache" "$probe/parent-build"
+          cp -a "$modules" "$probe/parent-modules"
+          cp "$probe/changed-origin.go" internal/httpurl/origin.go
+          compile_probe untrimmed
+          go clean -modcache
+          rm -rf "$cache"
+          cp -a "$probe/parent-build" "$cache"
+          cp -a "$probe/parent-modules" "$modules"
+          cp "$probe/parent-origin.go" internal/httpurl/origin.go
+          bash "$probe/track.sh" > "$probe/results/track.log" 2>&1
+          export GOPROXY="$(sed -n 's/^GOPROXY=//p' "$GITHUB_ENV")"
+          compile_probe parent-warm
+          bash "$probe/trim.sh" > "$probe/results/trim.log" 2>&1
+          cp "$probe/changed-origin.go" internal/httpurl/origin.go
+          compile_probe trimmed
+          python3 - "$probe/results" <<'PYCODE'
+          from pathlib import Path
+          import json, os, re, sys
+          results = Path(sys.argv[1])
+          counts = {}
+          rows = ['| Cache | Compile actions | Link actions | Seconds |', '| --- | ---: | ---: | ---: |']
+          for name in ['parent-seed', 'parent-warm', 'untrimmed', 'trimmed']:
+              actions = re.findall(r'^.*?/pkg/tool/[^/]+/(compile|link) ', (results / (name + '.log')).read_text(), re.MULTILINE)
+              counts[name] = {kind: actions.count(kind) for kind in ['compile', 'link']}
+              seconds = (results / (name + '.seconds')).read_text().strip()
+              rows.append(f"| {name} | {counts[name]['compile']} | {counts[name]['link']} | {seconds} |")
+          report = '\n'.join(rows) + '\n'
+          print(report)
+          (results / 'counts.json').write_text(json.dumps(counts, indent=2) + '\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(report)
+          PYCODE
+
+      - name: Upload matched compilation logs
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: matched-cache-compilation
+          path: ${{ runner.temp }}/matched-cache/results/
+          retention-days: 7
+          if-no-files-found: error
