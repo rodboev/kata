@@ -20,10 +20,11 @@ func CanonicalHTTPOrigin(raw string) (string, error) {
 	if scheme != "http" && scheme != "https" {
 		return "", fmt.Errorf("HTTP origin scheme must be http or https, got %q", u.Scheme)
 	}
-	if u.Hostname() == "" || u.User != nil {
+	hostname := u.Hostname()
+	if hostname == "" || u.User != nil {
 		return "", fmt.Errorf("HTTP origin must include a host and no user info")
 	}
-	host, zone, hasZone := strings.Cut(u.Hostname(), "%")
+	host, zone, hasZone := strings.Cut(hostname, "%")
 	host = strings.ToLower(host)
 	if hasZone {
 		host += "%" + zone
