@@ -1,0 +1,21 @@
+name: Release command probe
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  release-commands:
+    uses: ./.github/workflows/release-commands.yml
+
+  gate:
+    name: CI gate
+    needs: release-commands
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          RUN_RESULT: ${{ needs.release-commands.result }}
+        run: test "$RUN_RESULT" = success
