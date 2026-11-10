@@ -127,6 +127,7 @@ kata show abc4                         # inspect by short id
 kata tui                               # browse and triage interactively
 kata tui abc4                          # open an issue directly in the TUI
 kata ui                                # open the same ledger in a browser
+kata definitely-missing-command
 ```
 
 `kata create` prints each issue's short id; use it in later commands. Close only
