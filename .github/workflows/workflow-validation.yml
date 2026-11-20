@@ -1,3 +1,4 @@
+# Temporary PR trigger for the release-cache baseline; do not merge.
 name: Workflow validation
 
 on:
