@@ -1,6 +1,7 @@
 # Temporary PR trigger for the release-cache baseline; do not merge.
 # Trigger the baseline release check for comparison.
 # Trigger a main-push cache restore measurement.
+# Trigger a warm pull request release check.
 name: Workflow validation
 
 on:
